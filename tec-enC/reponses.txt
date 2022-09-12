@@ -1,0 +1,137 @@
+a-simple.c est un code client qui utilise les fonctionnalitées d'autobus et de ps_standard via __internes.h qui implémente les structures. Il y a une communication entre ps_standard et autobus implicite.(voir fichier __internes.h et son inclusion dans le code test: simple.c).
+
+b-Le fichier ps_standard.h se charge de la modification de l'état du passager via la structure ps__monter_dans qui via une reference a un autobus va changer les elements de l'instance du passager.
+
+1ere question: ps_standard.c qui se charge de la modification de l'état du passager.
+
+c-(__internes.h aussi via les fonctions citées tout avant dans le texte html)
+=>Le code autobus.h manipule la fonction ab__aller_arret_suivant qui utilise __ps_nouvel_arret dans __internes.h qui utilise forcément un struct passager* comme argument donc manipule les champs et donc la modification d'une struccture va impacter la fonction dans __internes.h et du coup impacter la réalisation de autobus.c <=> dépendance de autobus à ps_standard qui est implémenté par __INTERNES.H vis-à-vis de la modification de la structure elle-même.
+
+2ieme question(substrat: fonctionnellement et structures impliquantes dans le header autobus.h pour le début voir rq d-):
+	la partie autobus utilise des fonctions qui eux-mêmes utilisent des fonctions de __internes.h où est implémentée la structure ps_standard ; donc: toute variation des champs va entraîner une mise à jour de __internes.c et donc une modification du code de la fonction qui l'utilise dans autobus.c, d'où la dépendance de la partie autobus à la partie ps_standard. 
+
+d-Une démarche pour changer cela. Genre ne pas modifier les prototypes mais rendre ps_standard independant de autobus. La 1ere question nous dit que ps_standard.c se charge de la modification de l'état du passager et la deuxième nous dit que la réalisation de ps_standard peut impacter (via __internes.h comme précisé avant) la réalisation d'autobus. Pour permettre une indépendance de autobus via ps_standard sans pouvoir pour autant changer les prototypes ce qui sera le cas pour résoudre ce qui ETAIT avant, c'est indiqué:
+DANS __internes.h les fonctions autobus utilisées pour par ps_standard et avec l'avant une structure apparaît ; le fichier est la clef de tout donc dependance de autobus a ps_standard.
+REVENONS A CE QU'IL NOUS INTERESSE:
+**ps_standard se charge de la modification du passager
+ET:
+**autobus est dependant à ps_standard
+Comment casser cette dépendance ?
+Encapsuler les traitements dans la structure ps_standard,genre: la structure contiendrait des pointeurs de fonctions ainsi à la création (ps_standard non autobus) on fixerait cette structure donc elle bougera pas en changeant la réalisation que le code client et donc autobus ne vas pas varier;sa réalisation;en fonction de l'implémentation de ps_standard dans __internes.h et modifier toutes les fonctions qui utilisent ps_standard fonctionnalitées en accédant au champ fonction correspondant.
+Ainsi, si on fait varier la structure ca se fera à l'éxécution et tout s'adaptera à cela car il y avait une dépendance fonctionnelle entre ps_standard et autobus et cela entraînerait une indépendance entre ces 2 sous-modules.
+
+3ieme question: utiliser le principe d'encapsulation pour rendre la chose fixe à l'éxécution ainsi les prototypes ne changeront pas mais la réalisation va changer une fois et la variation faite par ps_standard ne se fera pas car c'est à l'éxécution ce qui rendrait autobus indépendant. On pourrait même ajouter des pointeurs de fonctions donnant l'état pour ne pas être amené à modifier les champs non 'fonctionnelles'. On va se demander si on change de fonction ? cela va pas modifier autobus qui utilise en interne (réalisation détaillée) ceux-ci mais le changement de la structure en interpolant des champs en un unique va impacter tout. 
+
+
+4ième question: Abstraction des fonctionnalitées par des pointeurs de fonctions. Cela modifierait le code mais LA VARIATION des champs se fera à l'éxécution et les fonctions sont adaptées à cela=>indépendance garantie.
+
+e-
+5ieme question (facile): pour rendre les deux concepts abstraits, on crée un interface substituable à la réalisation par un autre n'impactant pas le code client (but 1 de la POO vu en cours)
+6ieme question(facile à peu près): __internes.h est un lien entre autobus et ps_standard ; il implémente par dessus les 2 structures. Il sert de réalisations et de montrer aussi la dépendance au tout début de ces 2 modules. C'est qu'une intention car on aurrait pu faire différemment et explicitement dans le fichier simple.c ca serait plus clair mais le code ne sera pas modulaire dans ce cas mais abstrait vis-à-vis de ce que le client veut de l'interaction autobus ps_standard.
+
+
+
+===============================================================================================
+4.2.Extension: Ajout d'un nouveau caractere de passager
+a-passager indécis:
+demande debout sinon dehors a l'arret
+a chaque arret, change de position.
+C'est un type de caractère à mettre en oeuvre.
+D'après le code dans __internes.h qui s'occupe des interactions ; __ab_arret_demande_debout/assis doit être modifier ; inspecter l'état du passager et l'inverser.
+(pour l'arrêt seulement) pour la montée now:
+il faut qu'il demande une place ou rester dehors: il faut enlever la fonction __ab_montee__demander_debout car cela impliquerait qu'il peut monter et rester debout par contre laisser la fonction premiere et l'adapter en fonction des places via struct autobus *.
+Rq: pour la descente ; il faut pas se méfier de __ab__arret_* car cela impliquerait une modification de ce qu'il faut faire a chaque arret il finit par descendre la fonction 3 reste intacte.
+
+1ère question: la deuxieme dans le premier block et adapter le block des 3 fonctions après celles-ci.(__ps__nouvel_arret aussi car cela modifie l'état du passager (voir le commentaire))
+On pourrait se dire de modifier ps monter dans vu la toute premiere question mais celle ci revient a modifier les fonctions citées en-dessus(dependance fonctionnelle).
+
+
+b-C'était déjà dit. On adapte le code à nos besoins. la fonction par exemple __ab__monter_debout_assis va tester via le champ *a dans ses parametres si une place est libre et ferait le traitement habituel d'avant. On pourrait même modifier ps__monter_dans précisément dans la partie else if ab_a_place_debout on applique rien car le passaager indecis veut monter assis donc adapter cela ou bien enlever la fonction implique de modifier les fonctions qui agissent sur ps_standard indirectement vu la dépendance d'où ps_standard.c évoqué ICI. Sans modifier le code de la partie autobus, on va modifier ceux qui agissent sur le passager soient les fonctions de ps_standard.h en laissant le vide pour ce dernier concept, naturellement sans suivre les instructions, on pourrait sans doute aller faire une condition sur ajouter_passager si existe place libre accessible via *a ou bien utiliser la fonction qui l'utilise plus souple  ps__monter_dans en enlevant le else if en entier car il va rester dehors: 2 possiblitées. On parlait plus spécifiquement d'ajouter un nouvelle caractere sans modifier la partie autobus et bien si on change __ab__montee_demander_assis sans changer la façon d'interpréter la structure ; tout est bon. On vire du coup __ab__arret_demander_debout/assis par une seule fonction en interne sans changer le module implémenté autobus et cela en disant que __ab__arret_demander se présume en une modification de place ou sortie (appel a la meme 'structure fonctionnelle' en sortie non modifiée. Tout cela dans __internes.h) C'est fait, on impacte pas du tout autobus et non pas autobus pour la deuxieme fois via une 
+reflexion sur ps_standard qui lui est fonctionnellement dépendant.
+
+2ieme question: 
+Reflechir avec les fonctions precedentes: on veut modifier un caractere la 1ere question dit que  ps_standard.c sert de la modification de l'état du passager. (via __ps_nouvel arret qui fait sortir le passager si le numero de destination correspond au numero d'arret de l'autobus) Ce qui nous fait dire que seul ps_standard fait JOUER l'état du passager ; donc les fonctions à modifier pour prendre en compte ceci doivent être dans ps_standard.h partiellement(dépendance). La fonction évoquée traite le nouvel arret donc peut inclure le changement de position ou bien sortit si la nouvelle n'existe pas (cas tres particulier) et la fonction triviale dans le fichier cite: __ps_monter_dans permet de faire monter un passager avec des tests sur l'existence d'une place assise ou debout ; donc: le modifier PERMET de prendre en compte le fait qu'il entre si il existe des places assises en virant la deuxième possiblitée. Les deux fonctions sont les suivantes: __ps__nouvel_arret et ps__monter__dans.(PS_STANDARD.C).
+
+3ieme question(resume des 2 dernieres):On avait dit que pour la montee on va virer la deuxième partie du code autobus mais là on change (modifie) le code la partie autobus pour être précis. Pour le faire, concentrons-nous sur ps_standard et les 2 fonctions. On ne pas toucher DONC aux prototypes des #sous-fonctions# decrites la-dessus. Par conséquent, pour ajouter le nouvel caractere moi personnellement virer du code et ne plus utiliser une fonction c'est pas ce que j'appelerai une modification du code de autobus.c. Mais bon, il existe une autre manière de s'y prendre:: ajouter un attribut caractere dans la structure permettant d'adapter les fonctions ps__monter__dans et __ps_nouvel_arret en fonction du caractere du passager. Cad, modifier le code d'une façon intelligente, dire en soi que au lieu de faire du 'nimporte quoi' pourquoi pas instancier  la structure avec de nouveaux attributs decrivant le caractere et adapter les 2 fonctions en fonction de conditions sur ces caracteres decrites pour appliquer soit ce traitement la soit ce traitement la . CA generalise les choses (probleme de changer de place et pas dispo) et ca permet de ne pas toucher aux fonctions d'autobus DANS LE CODE soit de ne pas modifier le code de la partie autobus. On peut par exemple créer des fonctions variantes de ses fonctions pour chaque caractère (une structure avec une instanciation indépendante d'uaotbus au début référant un état debout inchangé puis monte change d'état ou bien pas de place dispo debout reste dehors => possibles avec tous le services qu'on a sans toucher au code d'autobus.c) qui va decrire cela(fonction__indecis pour le caractere indecis). Il suffirait pour aller plus loin d'appeler depuis les fonctions geenralistes la bonne fonction en fonction du caractere voulu par le client!
+SUPPLEMENT/àce qu'on adit:
+=>La reponse est la même, ca se renvoie à une généralisation.(tjrs le but) MAIS COMMENT?
+ET BIEN, qui dit generalisation, dit structure de base et ajout de champs/modules,etc...
+<=>la question de la réponse est la suivante: Comment se baser sur ps_standard pour implémenter un caractère?
+=>ajout de champ
+=>instanciation par debout 
+=>modification du corps en accédant aux champs pour changer de position si nouvel arret sinon dehors non montee si existe pas position debout(la 2ime via une fonction qu'on a deja observe, la deuxieme via les champs de struct autobus).
+<=>updating des fonctions de la question précédente.
+=>reponse a la question de la generalisation et prelude a la question suivante: En quoi cela peut aider a faire de la generalisation?
+>instancier des comportements différents permettent de créer de nouvelles fonctions vu qu'on veut un caractere dans une structure soit une seule fonction et bien celle ci opérant sur un ps_standard va tester son type et appeler la fonction fille responsable de ce comportement tout en gardant la principale intacte.
+>On a à peu près fait de la factorisation du code IMPLICITE.
+
+>3IEME QUESTION:
+avantages: avoir plusieurs réalisations pour un même autobus(plusieurs comportements de passagers et donc varier les bus indirectement!)
+inconvénients: s'approprier de mauvais choix en dupliquant en fonction des besoins du client le code de la fonction fille correspondante.
+=>CONCLUSION NATIVE, BREVE et GLOBALE:
+Un avantage de cette solution est qu'elle est assez facilement implémentable(implémentation facilité vu qu'on touche pas aux fonctions peres..) en plus d'être simple à comprendre(oui). En contrepartie, cette solution implique de créer deux nouvelles fonctions à chaque fois qu'on souhaite ajouter un nouveau caractere ce qui peut être assez contraignant.
+
+===============================================================================================
+
+
+4.3.Le décompte des places dans autobus:
+Résumons les deux derniers points surtout la 4.2:
+1/ajout caractere => agissement sur ps_standard => question_1 => appels aux fonctions de ps_standard soit ps_monter_dans et _ps_nouvel_arret qui traite la montee et la descnete d'apres le fichier.
+2/virer des conditions et en ajouter d'autres modifications ou bien en prélude de l'avantage d'avoir plusieurs caracteres=>generalisation=>structurellement en C=>ajout champ nouveau=>adapter les fonctions en fonction du champ ajoute qui est debout à l'instanciation et qui change de position a chaque arret(2ieme fonction) et qui ne monte pas sauf si il existe une position debout dispo , c'est facile d'adpater et cela sans pour autant chnager les fonction autobus.
+3/AVANATAGES: varier les caracteres=>nouvelles fonctions speciales(specialisation au moement de la generalisation(reflexion))=>factoriser le code en appelant via les fonctions normaux via une condition agissant sur ce champ la bonne fonction correspondante<=>variation des comportements au sein d'un même bus.
+INCONVENIENTS: même si c'est facile d'implémenter(tests) et facile aussi de comprendre(factorisation), reste le coût d'en avoir bcp de fonction à la demand eparticulière d'un traitement au niveau client. 
+RESUMONS LE 4.1:
+=>La partie du code qui se charge de la modification de l'état du passager?
+>On aurait pu dire ps_standard vu la façon dont est écrit le header mais ces fonctions utilisent des fonctions de autobus.h et d'autres implémentées que dans autobus.c donc plus pronfondément (DEPENDANCE FONCTIONNELLE) c'est autobus.c. 
+>Donc c'est autobus.c qui gère les modifs. de ps_standard ; parlant de dépendance, une réflexion sur ps_standard.c pour en tirer des conclusions serait possible ; voire avant (milieu jusqu'à là).
+=>La variation des champs de ps_standard entraine une variation de la façon dont on implémenterait des fonctions internes qui décrivent le lien entre les deux concepts (exemple d'une fonction spécifique à l'autobus qui utilise une autre portant en argument une structure  ps_standard) ; donc en général, une fonction d'autobus qui gère un ps_standard va se voire en profondeur potentiellement se modifier donc autobus n'est pas indépendant de ps_standard. Tout simplement, on peut dire que la fonction dans autobus monter debout modifie via l'acces aux deux attributs donc ps_standard se modifie de cette façon la fonction devient un core dumped a l'execution globale(makefile)=>dependance d'autobus vis-a-vis de ps_standard.
+>(3):
+ =>
+ 	Une solution pour éviter la dépendance et donc gérer le passager sans passer par les sous-fonctions de l'autobus(fonctions dans autobus.c) c'est de la faire directement dans ps_standard.h/c. Implémenter des fonctions qui modifient l'état du passager vu qu'on dispose de tout maintenant. Ce faisant, les fonctions internes de autobus pourront y faire appel quelle que soit la forme de la structure ps_standard. Ca se discute. EN FAIT ici, au lieu de faire ce qu'on a proposé efficacement AVANT cad. passer par des pointeurs specifiques a la structure (encapsulation au serivce de l'abstraction en C) qui vont permettre de ne pas modifier le prototype des fonctions existances mais de permettre pour chacune d'appeler la fonction caractéritique via les parametres passées à la fonction et donc de gérer l'indépendance vu qu'on dispose des 2 structures. C'est bon, mais il existe une solution plus simple et pratique. Une solution serait de ne pas avoir besoin de __internes.h (a retenir) et donc de se restreindre aux nominations (ps_standard va permettre ceci) et donc d'implémenter une fonction de ps_standard qui permet de modifier le passager possible car celle -ci appelle une fonction qui ne fait que manipuler l'autobus et le passager qu'on a deja en parametre (nouvelle fonction). Les ofnctions internes de autobus pourront y faire appel quelque soit la forme de la structure ps_standard. (ce qui était l'objet avant partiellement...). Adapter fonctionnellement sans appel aux fonctions d'autobus permet de centraliser la réalisation et d'un côté au niveau des fonctions internes de l'autobus permettre une utilisation quelque soit la forme de ps_standard.(INDEPENDANCE FONCTIONNELLE ASSUREE)->On inverse un peu les trucs là, on rend le fichier __internes.h inutile en soit..
+>(4):
+=>Principe d'abstraction: utiliser un interface public d'implémentation=>varier les implémentations en fixant le code client(but 1 de la poo)
+=>intention du fichier: préciser les implémentations et les liens entre les 2 modules.
+POURQUOI C'EST UNE INTENTION EN C?
+		car on aurait pu mettre le tout dans le code client habituellement mais cela va casser la modularité forte du code ; ce n'est qu'une intention ; obligation pour le principe d'interface public(abstraction) mais inutile pour étudier les principes de base de la modularité de ce code.
+RESTE DERNIERE QUESTION AVANT CES 2 LA CONCERNANT LA 2 SOUS-PARTIE:
+>
+Le principe appliqué pour permettre la dépendance?
+En fait, on avait parlé de pointeurs de fonctions qui permettent une independance en traitant la donnée soit- meme comme un o bjet donc rend l'autobus et le passager independant(principe partiellement vu apres) mais il y avait une autre methode c'est d'ignorer les liens entre les deux modules de C implémentées via __internes en introduisant une nouvelle fonction de ps__standard effectuant les traitements avec du copier/coller pure car on dispose des champs en integralite des 2 structures: ps_standard et autobus. Donc, la solution revient à la même chose centraliser les implémentations et ignorer les appels qui sans doute seront dans la deuxieme solution(et c'est pour cela qu'elle me va bien) indépendante de la structure car cela ferait appel a des traitements secondaires sur des ps__standard donc independant de la structure ps__standard elle-meme. Par ceci, on a expliqué explicitement et en DETAILS comment ce principe est appliqué, cad. comment le principe qui permet de faire l'indépendance se fera au niveau du code (implémentations).
+
+--------------------------------------------------------------------------------
+la 4.3 maintenant: 
+deja faite. 
+passons a la 4.3:
+==================================================
+
+4.3.Le decompte des places dans l'autobus:
+RAPPEL:
+on a fait:
+la 4.1 traitant la propagation des modifications.
+la 4.2 traitant l'extension en terme d'ajout de nouvel caractere.
+et la 4.3 maintenant: le decompte des places dans 
+l'autobus:
+Le compte/decompte des palces assises debout utilisent la technique du copier/coller/modifier ; ca c'est sûr. On peut éviter ça et permettre une réutilisation de code. Cela peut se faire en créant des fonctions qui prennent en parametre un passager quelconque et font les 3 traitements concernees. Ainsi on va éviter dans les mêmes services de faire du copier coller ; on peut nuancer cela en regroupant les deux premieres et faire une nouvelle procedure par effet de bord faisant cela et son contraire apres cela aurait un aspect different. Et pour la premiere refaire la même chose en re-évaluant "" la chose restante tout au debut avant le triple retour chariot.
+On cree la fonction update(bool bool1, bool bool2, long debout_new, long assis_new, struct autobus* a, struct ps_standard* p) qui fera:
+p->debout=bool2;p->assis=bool1;a->debout=debout_new;a->assis=assis_new;
+et apres on appelle cette procedure dans __ab__arret_demander_debout via:
+	update(true,false,a->debout+1,a->assis+1,a,p)
+et dans la fonction __ab__arret_demander_sortie via la commande:
+	update(true,false,a->debout-1,a->assis+1,a,p)
+Et une autre focntion avec une évaluation avec les bons parametres comme on a fait avant pour le ci-dessus. 
+=>Cela va permettre d'éviter de dupliquer le code au sein d'un même service via un appel de fonction facotrisée lui-même par une structure de changement de paramètres astucieux (pas de copier/coller/modifier ici donc) dans les 2 problèmes
+=>problème résolu.(pas la peine de refaire le truc).
+
+
+
+=============================================================================================
+4.4.Algorithmique sur les tableaux:
+
+
+
+
+
+
+
+
+
