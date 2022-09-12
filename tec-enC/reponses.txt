@@ -126,9 +126,53 @@ Et une autre focntion avec une évaluation avec les bons parametres comme on a f
 
 =============================================================================================
 4.4.Algorithmique sur les tableaux:
+a-Problème de compacité:
+NULL apparaît au milieu lors du traitement lors des suppressions au sein du tableau struct ps_standard[taille];//syntaxiquement correct en C.
+=>Scenario dans simple.c pour expliquer avec un dessin le vrai problème puis on passera à la dépendance cyclique après avoir fait:
+1/Propogation des modifications
+2/Extension: Ajout d'un nouvel caractere de passager
+3/Le decompte des places dans autobus
+dans le 1 comme dans les autres, on avait parle de generalisation, de modularite de code(principes du code..) et surtout d'abstarction potentiellement via une encapsulation generale(selon la vision propre dont on lui attribue (juste)) ; dans le 3, on avait evoque la factorisation comme extension des buts de la poo comme le but precedent d'ajouter des realisations sans modifier le code client et changer la réalisation sans l'impacter aussi DE-MEME.
+>REVENONS A NOTRE PROBLEME DE BASE:
+decrivons la situation et apportons des solutions locales et globales:
+Kaylee portant le numéro 0 dans la liste des indices de a->passagers[] , Jayne le numéro 2, Inara le numéro 3. Ils entrent dans le bus normalement après une allocation non vide de ces 3 structures de type struct ps_standard*. Mais Kaylee et Jayne veulent descendre à l’arrêt 4.
+
+A l’avancement du bus à chaque arrêt et la montée de ces passagers, le nombre de places debout décrémentent, il est à 2 tout au début il devient zéro. Kaylee emporte la 1ère et unique place dispo assise au début. C’est pour cela qu’au 3ème arrêt, on a un affichage: assis<0>;debout<0> bus[3] cad. bus à l’arrêt 3. 
+
+Ce qui se passe à l’arrêt 4, c’est que Kaylee et Jayne veulent sortir car ils sont arrivé à destination (champs de structure dès la création) donc ps->destination n’est pas < a->arret ; c’est égal ce qui déclenche l’appel à la fonction dans le fichier ps__standard.c de la fonction d’autobus __ab_demande_sortie_arret qui applique les procédures de suppression cad. son indice dans le tableau a->passages[] devient NULL ; la zone mémoire allouée pour cette ressource est naturellement libérée par le mécanisme free et cela entraîne aussi la position !debout et !assis (dehors) c’est pour cela à l’arret 4; on se retrouve avec l’affichage suivant:
+[arret 4] assis<1> (Kaylee a quitté le bus) et debout<1> (Jayne aussi l’a quitté) avec les infos suivantes d’appels d’affichage d’états relatives a la structure ps_standard:
+Kaylee<endehors> ; Jayne<endehors> et finalement celui qui va quitter après (l’arrêt 5): Inara. 
+
+Le tableau devient comme ceci: NULL(Kaylee) en position 0 , NULL(Jayne) en position 1 après les traitements appropriées decrits ci-dessus et finalement @(struct ps_standard*)*Inara donc un tableau dans ce scenario de simple(code client_test) de la forme suivante:(de type struct ps__stadard**)
+                   [NULL,NULL,(struct ps__standard*)*Inara,...,NULL], car à la fin on aurait NULL sinon cela va retourner -99999 et on aurait à accéder à cette case dans un autre fichier de test support ce qui sera impossible. 
+
+=>Donc ici, on se retrouve avec le problème de non respect de compacité car on a une adresse non NULL au milieu d’adresses NULL alors qu’on devrait avoir toutes les adresses NULL contiguës donc soit toutes une partie des premières puis que des adresses !=NULL soit les premières !NULL et ça se termine par des adresses NULL sans tomber sur un indice tel que sa valeur dans le tableau est non NULL. simple.c met en oeuvre ce problème via le tableau en étude obtenue toute à la fin. 
+
+
+2ieme partie: solutions apportées
+=>Résolution possible du problème:
+On pourrait inverser la façon dont on insère les éléments. Au lieu de classer le premier élément dans la position 0, on l’insère à la fin, dans ce type de scénario, ça pourrait parfaitement marcher car les 2 états de tableaux initiaux et finaux auront la forme suivante:
+[@Inara,@Jayne,@Kaylee,NULL,...] (allocation avec calloc qui attribue des valeurs NULL aux pointeurs de pointeurs).
+Et après l’état final donnerait:
+[@Inara, NULL , NULL , NULL,...] ce qui respecte la compacité.  
+Mais cela est typique qu’à ce scénario, imaginons que c’est Jayne qui monte en deuxième et ne quitte pas le but qu’en dernière, on aura: [NULL,@Jayne,NULL,NULL..] si on garde la même situation pour les 2 autres.
+
+=>Résolution généraliste(pour tout type de scénario)
+On crée dans la structure autobus au lieu d’un tableau de pointeurs dont la taille est fixe à la compilation, un pointeur de pointeur qui avec calloc(pas malloc) on l’initilisera nous-même à 0 pour qu’il y ait pas l’adresse (struct ps__standard*)struct autobus* (on a teste ca correspond). 
+
+Après l’allocation avec comme arguments 1,sizeof(struct ps__standard) on pointe sur un seul élément, et chaque montée, on fera un realloc pour élargir le tableau (incrémenter sa taille de 1 le tableau qui est dans autobus ; on rappelle de type struct autobus**) et écrire dans cette zone de tableau l’adresse du nouveau passager ajouté. Ainsi, avec cela, on aurait un tableau(pointeur de pointeur) dont la taille correspond parfaitement au nombre de passagers dans le bus. 
+
+Faire cela avec les champs des structures au sein d’une structure autobus est impossible, c’est pour cela que le choix de la constante MAX définie en internes.h s’est avéré une solution au début pas respectant le principe de compacité. Si on suppose avoir 5 passagers et que le deuxième va sortir, on va faire un shift_left pour décaler les éléments d’indices 2 jusqu’à 4 à gauche puis mettre la dernière case à zéro ou bien réallouer le tableau négativement en s'adaptant à 4 passagers cette fois-ci. Cette procédure expliquée ici respecté dans n’importe quelle implémentation la façon précise dont on respecte le principe des NULL contiguës on principes de compacité dans le tableau au niveau de l’appel à la fonction: ab_aller_arret_suiavnt qui vérifie si quelqu’un veut sortir et fait le traitement adéquat. 
+
+
+ET VOILA.
 
 
 
+
+
+PASSONS A LA DERNIERE PARTIE: LA DEPENDANCE CYCLIQUE:
+->notions très importante quand on veut decrire une dépendance.
 
 
 

@@ -8,7 +8,7 @@ LDFLAGS=-L ${LIB}
 all: simple
 
 clean:
-	rm -f simple
+	rm -rf simple tec/*.o tec/*.c~ tec/*.h~
 
 cleanall: clean
 	cd ${LIB}; make cleanall
