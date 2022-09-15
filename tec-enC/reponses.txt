@@ -173,6 +173,131 @@ ET VOILA.
 
 PASSONS A LA DERNIERE PARTIE: LA DEPENDANCE CYCLIQUE:
 ->notions très importante quand on veut decrire une dépendance.
+4.5 Une dépendance cyclique
+
+Montrer qu’il y a une dépendance cyclique entre la partie autobus et la partie ps_standard.
+Comme la partie 4.1 Propagation des modifications l’explique, l’application est découpée en trois parties :
+le scénario (programme principal) qui utilise le code de l’autobus et du passager standard ;
+l’autobus qui utilise le code du passager standard ;
+le passager standard qui utilise le code de l’autobus.
+En effet, le passager a besoin de savoir s’il reste des places assises ou debout dans un autobus pour pouvoir monter et modifier son état.
+Concernant le bus, il a également besoin de savoir si un passager monte dans l’autobus ou pas et s’il est assis ou debout.
+La dépendance est donc bien cyclique, ce n’est pas une partie qui utilise l’autre mais bien chaque partie qui a besoin des informations sur un attribut de l’autre pour fonctionner, voire même modifier un attribut de l’autre partie.
+
+Dans le cas de la compilation séparée, une dépendance d’utilisation cyclique est problématique si on n’utilise pas de pointeur sur les structures ou dans le passage de paramètres. Expliquer pourquoi ?
+Dans le cas de la compilation séparée, une dépendance d’utilisation cyclique est problématique si on n’utilise pas de pointeur sur les structures ou dans le passage de paramètres. En effet, dans le cas où on doit modifier un attribut de la structure de l’autre partie dans une fonction, si l’on n’utilise pas de pointeur, la modification ne sera que local, dans une copie de la structure mais ne sera pas retranscrite dans la structure en elle-même. Un pointeur nous permet donc de pouvoir modifier une information dans une autre structure sans perdre la modification.
+=>AJOUTONS LE FAIT que l'allocation pas en pointeurs utilisation en cas de ce type de dependance est difficile d'où la phrase à apprendre sur les pointeurs.
+
+
+->Reprendre la question propre:
+Dans notre cas, compacter les éléments provoque un problème pendant le parcours du tableau dans la fonction ab__aller_arret_suivant(). En prenant le scénario exemple (simple.c), expliquer, avec un dessin, le problème.
+
+Compacter les éléments revient à décrémenter l’indice de tous les passagers situés après le passager qui descend. Cependant, le parcours du tableau est réalisé par un indice i, que l’on incrémente à chaque passager.
+On voit alors sur la figure 1 que la compression se fait après traitement du passager descendant, ce qui amène le passager suivant à se retrouver à la place d’indice déjà traitée. Ainsi, la descente d’un passager fait que le suivant n’est pas traité et ne change pas d’état même s’il le devrait.
+
+Dans l’exemple de simple.c, lors de la descente de Kaylee, si l’on compresse le tableau alors Jayne prendra la place d’indice précédemment occupée par Kaylee, avant que l’indice de parcours ne soit incrémenté, amenant Jayne à ne pas descendre du bus malgré son arrêt.
+
+(schema deja expliqué).
+->LE DECOMPTE DES PLACES DANS AUTOBUS.C::
+Dans le code d’autobus, la réalisation du décompte des places assises et des places debout utilise la technique du copier/coller/modifier.
+Donner une solution de réutilisation qui évite le copier/coller de cette réalisation.
+Pour éviter le code “copier/coller” écrit dans les fonctions internes de l’autobus (avec pour nom : __ab__….), il est possible d’utiliser une fonction généralisant (factorisant) le code écrit dans les fonctions internes.
+
+Concrètement, on ajoute une fonction prenant en paramètres: l’état final du passager (par un booléen par exemple), un paramètre indiquant si l’autobus est à l'arrêt ou non (encore un booléen), et bien entendu les références des structures (pointeurs en C).
+Le code de gauche est le code d’origine. Et celui de droite le nouveau passant par une fonction généralisant l'intérieur des fonctions internes de l’autobus.
+Remarque: On aurait pu aussi utiliser des énumérations pour coder le changement d’état (montée/arrêt, assis/débout) cela rendrait le code encore plus lisible.
+VOILA.
+->4.1 jusqu'à 4.5.
+AJOUTONS DES PRECISIONS UTILES POUR LE 4.1:
+4.1 Propagation des modifications
+
+Indépendance entre autobus et ps_standard
+
+Quelle partie de code (autobus.c ou ps_standard.c) se charge de la modification de l’état du passager ?
+La partie du code se chargeant de modifier l’état d’un passager se situe dans autobus.c, et plus précisément en dessous de la ligne 69 (fonctions internes).
+
+Supposez que la réalisation de ps_standard est modifiée en remplaçant les attributs assis et debout par un seul attribut avec trois valeurs entières.
+
+Par rapport à cette variation, expliquer pourquoi la partie autobus n’est pas indépendante de la partie ps_standard.
+Le remplacement des attributs assis et debout de la partie ps_standard entraînerait l’invalidité du code présent dans la partie autobus, car celui-ci contient des fonctions qui modifient explicitement ces deux attributs.
+Exemple de la fonction __ab__montee_demander_assis :
+p->assis = true;
+p->debout = false;
+
+Ainsi, ces deux parties ne sont pas indépendantes.
+
+Quelle solution ne modifiant pas le prototype des fonctions existantes faut-il adopter pour permettre cette indépendance ?
+
+Une solution serait d’implémenter une fonction dans ps_standard.c permettant de modifier l’état du passager. Ce faisant, les fonctions internes de autobus pourront y faire appel au lieu de modifier directement la structure. Ainsi, elles ne dépendent plus de la forme de la structure ps_standard.
+
+Quel principe avez-vous appliqué pour permettre cette indépendance ?
+
+On a appliqué le principe d’abstraction.
+
+
+Indépendance entre les clients et les deux parties autobus et ps_standard :
+
+Pourquoi ne pas avoir déclaré les deux structures de données et toutes les fonctions dans ces deux fichiers en-tête ?
+
+Ces deux structures et ces fonctions ne sont pas déclarées dans les fichiers en-tête car ceux-ci sont directement utilisés par le code client. Cela permet de masquer le contenu des structures.
+
+Concluez sur l’intention du fichier du fichier en-tête __internes.h.
+Ce fichier a pour but de déclarer les structures tout en les gardant privé du code client qui ne fait appel qu’aux fichiers autobus.h et ps_standard.h.
+
+Pourquoi en langage C n’est-ce qu’une intention ?
+Cette méthode n’est qu’un intention car les prototypes de fonctions déclarées dans un fichier d’en-tête ne sont pas contraignants, et peuvent toujours être modifiés sans obtenir plus qu’un avertissement lors de la compilation.
+VOILA.
+C'est fini.
+RESUME RAPIDE:
+===============================================
+===============================================
+===============================================
+4.1:
+=>La partie autobus se charge de la modification car ps__standard appelle les fonctions d'autobus en __internes.h 's lien./
+=>La partie autobus est dependante car une partie de son code a un lien avec ps__standard via __internes.h (en commentaire) donc une modification de la structure rendrait quelques traitements invalidants en accédant aux champs, d'où la dépendance fonctionnelle via 1. et structurelle via la façon de les traiter.(ces actions)
+=>Pour permettre cette independance, on peut implémenter les propres fonctions sans avoir à appeler les fonctions d'autobus, la dependance cylcique impliquerait un appel partiel avec des traitements sur autobus uniquement des fonctions de ps__standard d'où une indépendance et une variation de la structure sans changer le code autobus.
+=>Principe utilisé: encapsuler les traitements=>Abstraction des COMMANDES VIS-A-VIS de la structure autobus en realisation.
+=>Pour faire varier les implémentations au profit de codes clients.
+=>C'est qu'une intention car on aurait pu faire la même chose dans le code client pour être simple, c'est qu'une intention en C vu la structure des headers.
+4.2:
+=>__ps_nouvel_arret et ps__monter_dans prennent en compte ceci.
+=>ajouter un champ de structure et changer le code en appelant des sous-fonctions generiques specifiques a chaque comportement.(ça change pas le code de autobus)
+OU BIEN: faire un switch sur le comportement at ajouter de nouveaux traitements cela impliquerait une intacte 'modification' de la partie autobus.c./
+=>AVANTAGE: traiter plusieurs comportements en factorisant le code
+facile a comprendre;implementer.
+INCONVENIENTS: 1000 fonctions pour 1000 comportements
+difficile a mettre en oeuvre sans utiliser d'autres choses algorithmiques.
+4.3:
+=>Eviter le copier coller en ajoutant une fonction qui fait cela (facotriser le code) non specifique a autobus et au passager (eviter les modifications) et les appeler 2 fonctions pour les 2 copier/coller dans les 2 fonctions en question. 
+CA MANIPULER DES BOOLEENS.
+UNE IMPLEMENTATION AVEC DES ENUM EST AUSSI UNE OPTION PEU CHOISIE.
+4.4:
+=>compacité via un décalage au lieu de mettre à NULL.
+4.5:
+=>utilisation du passager de autobus via un appel de fonction et encapsulation du nombre de passagers (tableaux avant decrit dans 4.4) dans la structure autobus d'ou la dependance vis-a-vis du passager et inversement. C'est cyclique. Il faut faire des pointeurs car appeler avec un pointeur et modifier un pointeur champ profond peut ne pas mettre en évidence l'effet de bord et faire en sorte que l'allocation tienne la route se fera uniquement via une connaissance détaillée de la taille ce qui impossible ici juste en pointeurs de pointeurs ce qui est met en défaut en partie la structure de autobus en terme de dépendance structurelle au passager.
+CE QUI FAUT RETENIR:
+_La dependance cyclique et l'utilisation de pointeurs impérativement lors des appels de fonctions.
+_La factorisation de code pour éviter un copier/coller/modifier.
+_Le principe de compacité et les décalage après des allocations par calloc d'un tableau de pointeurs de taille fixé par une macro.
+_Ne plus dépendre en implémentant nos propres fonctions sans appeler autres pour que la dépendance en inverse les utilise quelque soit la structure avec de petits traitements specifiques pas a cette partie ajoutee pour rendre les choses abstraites. Ca a un inconvenient de mise en oeuvre.
+_La derniere fonction appelee se charge de la modification dans le cadre de dependance cyclique d'ou la dependance, permettre un appel en fonction du caractere permet de ne pas toucher a l'autobus (abstraction) et de rendre avec de petits ajouts non 'pris en compte' la partie autobus abstraite par rapport a la structure du passager dans l'autobus. 
+_Varier les implémentations via un fichier de lien __internes.h ,c'est juste une intention en C car on pourrait faire cela dans la partie code client d'où la structure qui donne des warning un peu speciale des headers en C, ce qui expliquerait ce qu'on vient de dire. 
+IMPORTANT:
+1-la dependance cyclique et l'utilisation de pointeurs aux appels impératifs et au sein d'une structure (2 causes).
+2-Factorisation fonctionnelle pour éviter des copier/coller/modifier.
+3-Compacité par des shifts et extension d'un caractère en dependance cyclique par une implémentation propre et des swtich avec appel de la fonction correspondante pour éviter de changer l'autre code dont il depend avec ajout d'un champ comme problematique.
+4-Abstraction par des propres fonctions permettant de varier la structure tout en laissant les sous fonctions qui modifient l'etat inchangeables.
+A RETENIR:
+DEPENDANCE CYCLIQUE ET POINTEURS.
+COPIER COLLER MODIFIER ET FACTORISATION FONCTIONNELLE DE CODE
+COMPACITE ET LES SHIFTS APRES UNE ALLOCATION PAR CALLOC D'UN TABLEAU DE POINTEURS
+ABSTRACTION PER DES SWITCH TOUT EN LAISSANT INTACT LA PARTIE DEPENDANTE ET FAIRE VARIER LES PASSAGERS DANS __INTERNES.H SANS MODIFIER LA PARTIE AUTOBUS PAR UNE MODIFICATION PARTIELLE PAS TOTALE DE CE CODE.
+PRINCIPES COMPRIS.
+FIN TD_0.
+
+
+
+---------------------------------------------------. 
 
 
 
